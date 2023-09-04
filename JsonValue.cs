@@ -570,6 +570,8 @@ public class JsonValue
                         valueStored = valueStored.Substring(1, valueStored.Length - 2);
                         varType = VarType.String;
                     }
+                    else if (valueStored == "null" || valueStored.Length == 0)
+                        varType = VarType.Null;
                     else if (valueStored.Contains('.'))
                         varType = VarType.Decimal;
                     else if (valueStored.Equals("true") || valueStored.Equals("false"))
