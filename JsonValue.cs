@@ -8,10 +8,10 @@ public class JsonValue
     {
         get
         {
-            varType = VarType.Array;
-            if (index < 0)
+            if (index < 0 || index > list.Count)
             {
                 return new JsonValue();
+                //return new JsonValue(new OwnerInfo(this, false, index.ToString()));
             }
             else if (index >= list.Count)
             {
@@ -34,7 +34,7 @@ public class JsonValue
     {
         get
         {
-            varType = VarType.Object;
+            //varType = VarType.Object;
             if (!content.ContainsKey(key))
             {     
                 Add(key, new JsonValue());
@@ -44,6 +44,7 @@ public class JsonValue
         }
         set
         {
+            varType = VarType.Object;
             Add(key, value);
         }
     }
@@ -52,6 +53,26 @@ public class JsonValue
     public bool IsObject { get { return varType == VarType.Object; } }
     public bool IsArray { get { return varType == VarType.Array; } }
     public bool IsValue { get { return !IsArray && !IsObject; } } 
+
+    public List<JsonValue> Array
+    {
+        get { return list; }
+        set 
+        {
+            varType = VarType.Array;
+            list = value; 
+        }
+    }
+
+    public Dictionary<string, JsonValue> Object
+    {
+        get { return content; }
+        set
+        {
+            varType = VarType.Object;
+            content = value;
+        }
+    }
 
     /// <summary> Returns total number of objects within this object and itself </summary>
     public int Size
@@ -212,6 +233,14 @@ public class JsonValue
         return false;
     }
 
+    public void Set(JsonValue obj)
+    {
+        this.list = obj.list;
+        this.content = obj.content;
+        this.varType = obj.varType;
+        this.valueStored = obj.valueStored;
+    }
+    public void Set(ISerializable obj) { Set(obj.Serialized()); }
     public void Set(string value) { Set<string>(value); }
     public void Set(bool value) { Set<bool>(value); }
     public void Set(int value) { Set<int>(value); }
@@ -250,6 +279,7 @@ public class JsonValue
             varType = VarType.Object;
         }
     }
+    public void Add(string key, ISerializable obj) {  Add(key, obj.Serialized()); }
     public void Add(string key, string value) { Add<string>(key, value); }
     public void Add(string key, bool value) { Add<bool>(key, value); }
     public void Add(string key, int value) { Add<int>(key, value); }
@@ -289,8 +319,15 @@ public class JsonValue
         if (index >= 0 && list.Count > index)
             list.Insert(index, obj);
     }
-
-    public void Insert<T>(int index, T val)
+    public void Insert(int index, ISerializable obj) {  Insert(index, obj.Serialized()); }
+    public void Insert(int index, string value) { Insert<string>(index, value); }
+    public void Insert(int index, bool value) { Insert<bool>(index, value); }
+    public void Insert(int index, int value) { Insert<int>(index, value); }
+    public void Insert(int index, uint value) { Insert<uint>(index, value); }
+    public void Insert(int index, float value) { Insert<float>(index, value); }
+    public void Insert(int index, double value) { Insert<double>(index, value); }
+    public void Insert(int index, decimal value) { Insert<decimal>(index, value); }
+    void Insert<T>(int index, T val)
     {
         JsonValue obj = new JsonValue();
         obj.Set(val);
@@ -307,8 +344,15 @@ public class JsonValue
         list.Add(value);
         varType = VarType.Array;
     }
-
-    public void Append<T>(T value)
+    public void Append(ISerializable value) { Append(value.Serialized()); }
+    public void Append(string value) { Append<string>(value); }
+    public void Append(bool value) { Append<bool>(value); }
+    public void Append(int value) { Append<int>(value); }
+    public void Append(uint value) { Append<uint>(value); }
+    public void Append(float value) { Append<float>(value); }
+    public void Append(double value) { Append<double>(value); }
+    public void Append(decimal value) { Append<decimal>(value); }
+    void Append<T>(T value)
     {
         JsonValue obj = new JsonValue();
         obj.Set(value);
@@ -317,8 +361,6 @@ public class JsonValue
 
     #endregion
 
-    public List<JsonValue> GetList() { return list; }
-    public Dictionary<string, JsonValue> GetObject() { return content; }
 
     #region SERIALIZATION
     /// <summary> Converts this JsonValue object into a json string. 
@@ -688,4 +730,10 @@ public class JsonValue
 
     #endregion
 
+}
+
+public interface ISerializable
+{
+    /// <returns> A JsonValue representation of data stored by this object. </returns>
+    JsonValue Serialized();
 }
