@@ -8,8 +8,18 @@ public class JsonValue
     {
         get
         {
-            if (varType != VarType.Array || index < 0 || index >= list.Count)
+            varType = VarType.Array;
+            if (index < 0)
+            {
                 return new JsonValue();
+                //return new JsonValue(new OwnerInfo(this, false, index.ToString()));
+            }
+            else if (index >= list.Count)
+            {
+                for(int i = list.Count; i <= index; i++)
+                    Append(new JsonValue());
+                
+            }
 
             return list[index];
         }
@@ -25,9 +35,12 @@ public class JsonValue
     {
         get
         {
-            if (varType != VarType.Object || !content.ContainsKey(key))
-                return new JsonValue();
-
+            varType = VarType.Object;
+            if (!content.ContainsKey(key))
+            {     
+                Add(key, new JsonValue());
+                return content[key];
+            }
             return content[key];
         }
         set
@@ -103,6 +116,7 @@ public class JsonValue
     #endregion
 
     #region Constructors
+
     public JsonValue() { InitializeJson(); }
 
     public JsonValue(string value)
