@@ -12,7 +12,6 @@ public class JsonValue
             if (index < 0)
             {
                 return new JsonValue();
-                //return new JsonValue(new OwnerInfo(this, false, index.ToString()));
             }
             else if (index >= list.Count)
             {
