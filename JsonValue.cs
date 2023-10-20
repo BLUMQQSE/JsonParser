@@ -1,24 +1,26 @@
-﻿using System.Collections;
 using System.Text;
-
-public class JsonValue 
+using System;
+using System.Collections.Generic;
+using Godot;
+public class JsonValue
 {
-
     public JsonValue this[int index]
     {
         get
         {
-            if (index < 0 || index > list.Count)
+            varType = VarType.Array;
+            if (index < 0)
             {
-                return new JsonValue();
+                return new JsonValue(VarType.Undefined);
                 //return new JsonValue(new OwnerInfo(this, false, index.ToString()));
             }
-            else if (index >= list.Count)
+            else if (index == list.Count)
             {
-                for(int i = list.Count; i <= index; i++)
-                    Append(new JsonValue());
-                
+                for (int i = list.Count; i <= index; i++)
+                    Append(new JsonValue(VarType.Undefined));
             }
+            else if (index > list.Count)
+                return new JsonValue(VarType.Undefined);
 
             return list[index];
         }
@@ -34,10 +36,10 @@ public class JsonValue
     {
         get
         {
-            //varType = VarType.Object;
+            varType = VarType.Object;
             if (!content.ContainsKey(key))
-            {     
-                Add(key, new JsonValue());
+            {
+                Add(key, new JsonValue(VarType.Undefined));
                 return content[key];
             }
             return content[key];
@@ -49,21 +51,38 @@ public class JsonValue
         }
     }
 
+    /// <summary>JsonValue does not exist.</summary>
+    public bool IsUndefined { get { return varType == VarType.Undefined; } }
+    /// <summary>JsonValue exists, but holds no value.</summary>
     public bool IsNull { get { return varType == VarType.Null; } }
+    /// <summary>JsonValue contains a Dictionary(string, JsonValue).</summary>
     public bool IsObject { get { return varType == VarType.Object; } }
+    /// <summary>JsonValue contains a List(JsonValue)</summary>
     public bool IsArray { get { return varType == VarType.Array; } }
-    public bool IsValue { get { return !IsArray && !IsObject; } } 
+    /// <summary>JsonValue contains data but is neither an Array or Object.</summary>
+    public bool IsValue { get { return !IsArray && !IsObject; } }
+    /// <summary>JsonValue contains a bool.</summary>
+    public bool IsBool { get { return varType == VarType.Bool; } }
+    /// <summary>JsonValue contains a string.</summary>
+    public bool IsString { get { return varType == VarType.String; } }
+    /// <summary>JsonValue contains an int.</summary>
+    public bool IsInt { get { return varType == VarType.Int; } }
+    /// <summary>JsonValue contains an unsigned int.</summary>
+    public bool IsUInt { get { return varType == VarType.Int && valueStored[0] != '-'; } }
+    /// <summary>JsonValue contains a decimal.</summary>
+    public bool IsDecimal { get { return varType == VarType.Decimal; } }
 
+    /// <summary>Returns Array of (JsonValue) stored in this object.</summary>
     public List<JsonValue> Array
     {
         get { return list; }
-        set 
+        set
         {
             varType = VarType.Array;
-            list = value; 
+            list = value;
         }
     }
-
+    /// <summary>Returns Dictionary of (string, JsonValue) stored in this object.</summary>
     public Dictionary<string, JsonValue> Object
     {
         get { return content; }
@@ -82,15 +101,15 @@ public class JsonValue
             if (IsNull)
                 return 0;
             int val = 1;
-            if(varType == VarType.Array)
+            if (varType == VarType.Array)
             {
-                for(int i = 0; i < list.Count; i++)
+                for (int i = 0; i < list.Count; i++)
                     val += list[i].Size;
             }
-            if(varType == VarType.Object)
+            if (varType == VarType.Object)
             {
-                
-                foreach(KeyValuePair<string, JsonValue> entry in content)
+
+                foreach (KeyValuePair<string, JsonValue> entry in content)
                 {
                     val += entry.Value.Size;
                 }
@@ -107,9 +126,27 @@ public class JsonValue
             if (IsNull)
                 return 0;
             if (IsArray)
-                return list.Count;
-            if(IsObject)
-                return content.Count;
+            {
+                int result = 0;
+                foreach (JsonValue item in list)
+                {
+                    if (item.IsNull || item.IsUndefined)
+                        continue;
+                    result++;
+                }
+                return result;
+            }
+            if (IsObject)
+            {
+                int result = 0;
+                foreach (KeyValuePair<string, JsonValue> entry in content)
+                {
+                    if (entry.Value.IsNull || entry.Value.IsUndefined)
+                        continue;
+                    result++;
+                }
+                return result;
+            }
 
             return 1;
         }
@@ -124,7 +161,8 @@ public class JsonValue
         Bool,
         Array,
         Object,
-        Null
+        Null,
+        Undefined
     }
 
     enum ContainerEnum
@@ -138,6 +176,11 @@ public class JsonValue
     #region Constructors
 
     public JsonValue() { InitializeJson(); }
+    JsonValue(VarType type)
+    {
+        InitializeJson();
+        varType = type;
+    }
 
     public JsonValue(string value)
     {
@@ -170,7 +213,7 @@ public class JsonValue
     {
         valueStored = "";
         varType = VarType.Null;
-        
+
         content = new Dictionary<string, JsonValue>();
         list = new List<JsonValue>();
     }
@@ -185,12 +228,12 @@ public class JsonValue
     {
         InitializeJson();
     }
-    
+
     /// <returns> Associated data for this objects as a string. </returns>
-    public string AsString() 
+    public string AsString()
     {
         if (valueStored.Length == 0) return "[NULL JSON STRING]";
-        return valueStored; 
+        return valueStored;
     }
     /// <returns> Associated data for this objects as a int. </returns>
     public int AsInt()
@@ -203,10 +246,8 @@ public class JsonValue
     /// <returns> Associated data for this objects as a uint. </returns>
     public uint AsUInt()
     {
-        uint result;
-        try { result = uint.Parse(valueStored); }
-        catch (Exception ex) { result = 0; }
-        return result;
+        int value = AsInt();
+        return (uint)Math.Abs(value);
     }
     /// <returns> Associated data for this objects as a double. </returns>
     public double AsDouble()
@@ -214,7 +255,7 @@ public class JsonValue
         double result;
         try { result = double.Parse(valueStored); }
         catch (Exception ex) { result = 0; }
-        
+
         return result;
     }
     /// <returns> Associated data for this objects as a float. </returns>
@@ -240,20 +281,27 @@ public class JsonValue
         this.varType = obj.varType;
         this.valueStored = obj.valueStored;
     }
-    public void Set(ISerializable obj) { Set(obj.Serialized()); }
+
+    /// <summary>Sets the value stored in this object to string.</summary>
     public void Set(string value) { Set<string>(value); }
+    /// <summary>Sets the value stored in this object to bool.</summary>
     public void Set(bool value) { Set<bool>(value); }
+    /// <summary>Sets the value stored in this object to int.</summary>
     public void Set(int value) { Set<int>(value); }
+    /// <summary>Sets the value stored in this object to uint.</summary>
     public void Set(uint value) { Set<uint>(value); }
-    public void Set(float value) {  Set<float>(value); }
+    /// <summary>Sets the value stored in this object to float.</summary>
+    public void Set(float value) { Set<float>(value); }
+    /// <summary>Sets the value stored in this object to double.</summary>
     public void Set(double value) { Set<double>(value); }
-    public void Set(Decimal value) { Set<Decimal>(value); }
+    /// <summary>Sets the value stored in this object to decimal.</summary>
+    public void Set(decimal value) { Set<decimal>(value); }
 
     void Set<T>(T value)
     {
         InitializeJson();
         valueStored = value.ToString();
-        
+
         Type type = typeof(T);
         if (type == typeof(string))
             varType = VarType.String;
@@ -275,11 +323,11 @@ public class JsonValue
             content[key] = value;
         else
         {
-            content.TryAdd(key, value);
+            content.Add(key, value);
             varType = VarType.Object;
         }
     }
-    public void Add(string key, ISerializable obj) {  Add(key, obj.Serialized()); }
+
     public void Add(string key, string value) { Add<string>(key, value); }
     public void Add(string key, bool value) { Add<bool>(key, value); }
     public void Add(string key, int value) { Add<int>(key, value); }
@@ -287,6 +335,8 @@ public class JsonValue
     public void Add(string key, float value) { Add<float>(key, value); }
     public void Add(string key, double value) { Add<double>(key, value); }
     public void Add(string key, decimal value) { Add<decimal>(key, value); }
+    public void Add(string key, Vector3 value) { Add<Vector3>(key, value); }
+    public void Add(string key, Vector2 value) { Add<Vector2>(key, value); }
     void Add<T>(string key, T val)
     {
         JsonValue obj = new JsonValue();
@@ -298,17 +348,17 @@ public class JsonValue
 
     #region REMOVE
 
-    public void Remove(string key) 
-    { 
-        content.Remove(key); 
+    public void Remove(string key)
+    {
+        content.Remove(key);
         if (content.Count == 0)
         {
             varType = VarType.Null;
         }
     }
-    public void Remove(int index) 
+    public void Remove(int index)
     {
-        if(index >= 0 && list.Count > index)
+        if (index >= 0 && list.Count > index)
             list.RemoveAt(index);
         if (list.Count == 0)
             varType = VarType.Null;
@@ -317,9 +367,11 @@ public class JsonValue
     public void Insert(int index, JsonValue obj)
     {
         if (index >= 0 && list.Count > index)
+        {
+            varType = VarType.Array;
             list.Insert(index, obj);
+        }
     }
-    public void Insert(int index, ISerializable obj) {  Insert(index, obj.Serialized()); }
     public void Insert(int index, string value) { Insert<string>(index, value); }
     public void Insert(int index, bool value) { Insert<bool>(index, value); }
     public void Insert(int index, int value) { Insert<int>(index, value); }
@@ -327,6 +379,8 @@ public class JsonValue
     public void Insert(int index, float value) { Insert<float>(index, value); }
     public void Insert(int index, double value) { Insert<double>(index, value); }
     public void Insert(int index, decimal value) { Insert<decimal>(index, value); }
+    public void Insert(int index, Vector3 value) { Insert<Vector3>(index, value); }
+    public void Insert(int index, Vector2 value) { Insert<Vector2>(index, value); }
     void Insert<T>(int index, T val)
     {
         JsonValue obj = new JsonValue();
@@ -344,7 +398,6 @@ public class JsonValue
         list.Add(value);
         varType = VarType.Array;
     }
-    public void Append(ISerializable value) { Append(value.Serialized()); }
     public void Append(string value) { Append<string>(value); }
     public void Append(bool value) { Append<bool>(value); }
     public void Append(int value) { Append<int>(value); }
@@ -352,6 +405,8 @@ public class JsonValue
     public void Append(float value) { Append<float>(value); }
     public void Append(double value) { Append<double>(value); }
     public void Append(decimal value) { Append<decimal>(value); }
+    public void Append(Vector3 value) { Append<Vector3>(value); }
+    public void Append(Vector2 value) { Append<Vector2>(value); }
     void Append<T>(T value)
     {
         JsonValue obj = new JsonValue();
@@ -361,16 +416,55 @@ public class JsonValue
 
     #endregion
 
+    /// <summary>
+    /// Will attempt to incorporate all values within obj into this object. Will combine two VarType.Object 
+    /// values OR two VarType.Array values.
+    /// </summary>
+    /// <param name="obj">JsonValue object to add.</param>
+    /// <param name="objPriority">If true, obj key-value pairs will overwrite pre-existing key-value pairs.</param>
+    /// <returns>True if successfully merged two JsonValues, else False. </returns>
+    public bool Merge(JsonValue obj, bool objPriority = true)
+    {
+        if ((IsObject && obj.IsObject) || (IsArray && obj.IsArray))
+        {
+            if (IsObject)
+            {
+                foreach (KeyValuePair<string, JsonValue> entry in obj.Object)
+                {
+                    if (!objPriority)
+                    {
+                        if (content.ContainsKey(entry.Key))
+                            continue;
+                    }
+                    Add(entry.Key, entry.Value);
+                }
+            }
+            else
+            {
+                foreach (JsonValue entry in obj.Array)
+                {
+                    Append(entry);
+                }
+            }
+        }
+
+        return false;
+    }
+
 
     #region SERIALIZATION
+
     /// <summary> Converts this JsonValue object into a json string. 
     /// This method should only be called on an Object value, an Array and Value will return "{}".</summary>
-    public string Serialize()
+    public override string ToString()
     {
-        if (varType != VarType.Object)
-            return "{}";
-        string data = Serializer();
-        return data;
+        return Serializer();
+    }
+    public string ToFormattedString()
+    {
+        if (varType != VarType.Array && varType != VarType.Object)
+            return Serializer();
+        return AddFormatting(Serializer());
     }
     /// <summary> Helper function for handling creating a json string of all connected JsonValue objects.</summary>
     string Serializer()
@@ -383,14 +477,15 @@ public class JsonValue
             case VarType.Bool:
             case VarType.Int:
             case VarType.Decimal:
-                if (varType == VarType.Null)
+            case VarType.Undefined:
+                if (varType == VarType.Null || varType == VarType.Undefined)
                     return "null";
                 if (varType == VarType.String)
                 {
                     // convert escaped characters to text
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.Append('\"');
-                    for(int i = 0; i < valueStored.Length; i++)
+                    for (int i = 0; i < valueStored.Length; i++)
                     {
                         switch (valueStored[i])
                         {
@@ -428,6 +523,8 @@ public class JsonValue
                     sb.Append('[');
                     foreach (JsonValue item in list)
                     {
+                        if (item.IsNull || item.IsUndefined)
+                            continue;
                         sb.Append(item.Serializer());
                         sb.Append(',');
                     }
@@ -439,12 +536,13 @@ public class JsonValue
             case VarType.Object:
                 {
                     sb.Append('{');
-                    List<string> keys = new List<string>(content.Keys);
-                    foreach (string key in keys)
+                    foreach (KeyValuePair<string, JsonValue> item in content)
                     {
-                        sb.Append('\"'+key+"\":" + content[key].Serializer() + ',');
+                        if (item.Value.IsNull || item.Value.IsUndefined || (item.Value.IsArray && item.Value.Count == 0))
+                            continue;
+                        sb.Append('\"' + item.Key + "\":" + content[item.Key].Serializer() + ',');
                     }
-                    if (keys.Count > 0)
+                    if (content.Count > 0)
                     {
                         sb.Length--;
                     }
@@ -464,7 +562,7 @@ public class JsonValue
     /// </summary>
     /// <param name="data">Json string. Formatting will be removed within this function.</param>
     /// <returns>True if successful, False if unsuccessful.</returns>
-    public bool Deserialize(string data)
+    public bool Parse(string data)
     {
         varType = VarType.Object;
         int index = 1;
@@ -494,7 +592,7 @@ public class JsonValue
                     string key = "";
                     while (data[index] != '}' || inString)
                     {
-                        if(state == ContainerEnum.SettingKey)
+                        if (state == ContainerEnum.SettingKey)
                         {
                             key = "";
                             int startIndex = index;
@@ -530,7 +628,7 @@ public class JsonValue
 
                             state = ContainerEnum.SettingKey;
                         }
-                        
+
                         if (data[index] == ',')
                             index++;
                     }
@@ -540,7 +638,7 @@ public class JsonValue
             case VarType.Array:
                 {
                     int startIndex = index;
-                    while(data[index] != ']')
+                    while (data[index] != ']')
                     {
                         while (data[index] != ',' && data[index] != ']')
                         {
@@ -561,7 +659,7 @@ public class JsonValue
                                 valToAdd.Deserializer(data, ref index, VarType.Null);
 
                             Append(valToAdd);
-                            
+
                         }
                         if (data[index] == ',')
                             index++;
@@ -580,20 +678,20 @@ public class JsonValue
                         {
                             if (data[index] == '\\')
                             {
-                                switch (data[index + 1]) 
+                                switch (data[index + 1])
                                 {
                                     case 'n':
-                                        index+=2;
+                                        index += 2;
                                         value.Append('\n');
                                         continue;
                                         break;
                                     case 't':
-                                        index+=2;
+                                        index += 2;
                                         value.Append('\t');
                                         continue;
                                         break;
                                     case '\\':
-                                        index+=2;
+                                        index += 2;
                                         value.Append('\\');
                                         continue;
                                         break;
@@ -633,7 +731,7 @@ public class JsonValue
     /// </summary>
     void UpdateInString(ref bool inString, string data, int index)
     {
-        if(data[index] == '\"')
+        if (data[index] == '\"')
         {
             if (index > 0)
             {
@@ -674,6 +772,7 @@ public class JsonValue
         return result.ToString();
 
     }
+
     /// <summary>
     /// Takes in a string and adds on appropriate formatting to make a string more legible
     /// in a json file.
@@ -685,9 +784,9 @@ public class JsonValue
         int tabDepth = 1;
         result.Append(data[0].ToString() + '\n' + TAB);
         int i = 1;
-        while(i < data.Length)
+        while (i < data.Length)
         {
-            switch (data[i]) 
+            switch (data[i])
             {
                 case '{':
                 case '[':
@@ -730,10 +829,4 @@ public class JsonValue
 
     #endregion
 
-}
-
-public interface ISerializable
-{
-    /// <returns> A JsonValue representation of data stored by this object. </returns>
-    JsonValue Serialized();
 }
