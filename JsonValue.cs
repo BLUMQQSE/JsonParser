@@ -334,8 +334,6 @@ public class JsonValue
     public void Add(string key, float value) { Add<float>(key, value); }
     public void Add(string key, double value) { Add<double>(key, value); }
     public void Add(string key, decimal value) { Add<decimal>(key, value); }
-    public void Add(string key, Vector3 value) { Add<Vector3>(key, value); }
-    public void Add(string key, Vector2 value) { Add<Vector2>(key, value); }
     void Add<T>(string key, T val)
     {
         JsonValue obj = new JsonValue();
@@ -378,8 +376,6 @@ public class JsonValue
     public void Insert(int index, float value) { Insert<float>(index, value); }
     public void Insert(int index, double value) { Insert<double>(index, value); }
     public void Insert(int index, decimal value) { Insert<decimal>(index, value); }
-    public void Insert(int index, Vector3 value) { Insert<Vector3>(index, value); }
-    public void Insert(int index, Vector2 value) { Insert<Vector2>(index, value); }
     void Insert<T>(int index, T val)
     {
         JsonValue obj = new JsonValue();
@@ -404,8 +400,6 @@ public class JsonValue
     public void Append(float value) { Append<float>(value); }
     public void Append(double value) { Append<double>(value); }
     public void Append(decimal value) { Append<decimal>(value); }
-    public void Append(Vector3 value) { Append<Vector3>(value); }
-    public void Append(Vector2 value) { Append<Vector2>(value); }
     void Append<T>(T value)
     {
         JsonValue obj = new JsonValue();
