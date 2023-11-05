@@ -1,8 +1,26 @@
 using System.Text;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
+
 public class JsonValue
 {
+
+    public override bool Equals(object obj)
+    {
+        return this.ToString().Equals(obj.ToString());
+    }
+
+    public static bool operator == (JsonValue one, JsonValue two)
+    { 
+        return one.ToString().Equals(two.ToString()); 
+    }
+
+    public static bool operator !=(JsonValue one, JsonValue two)
+    {
+        return !one.ToString().Equals(two.ToString());
+    }
+
     public JsonValue this[int index]
     {
         get
@@ -50,28 +68,18 @@ public class JsonValue
         }
     }
 
-    /// <summary>JsonValue does not exist.</summary>
+
     public bool IsUndefined { get { return varType == VarType.Undefined; } }
-    /// <summary>JsonValue exists, but holds no value.</summary>
     public bool IsNull { get { return varType == VarType.Null; } }
-    /// <summary>JsonValue contains a Dictionary(string, JsonValue).</summary>
     public bool IsObject { get { return varType == VarType.Object; } }
-    /// <summary>JsonValue contains a List(JsonValue)</summary>
     public bool IsArray { get { return varType == VarType.Array; } }
-    /// <summary>JsonValue contains data but is neither an Array or Object.</summary>
-    public bool IsValue { get { return !IsArray && !IsObject; } }
-    /// <summary>JsonValue contains a bool.</summary>
+    public bool IsValue { get { return !IsArray && !IsObject && !IsNull && !IsUndefined; } }
     public bool IsBool { get { return varType == VarType.Bool; } }
-    /// <summary>JsonValue contains a string.</summary>
     public bool IsString { get { return varType == VarType.String; } }
-    /// <summary>JsonValue contains an int.</summary>
     public bool IsInt { get { return varType == VarType.Int; } }
-    /// <summary>JsonValue contains an unsigned int.</summary>
     public bool IsUInt { get { return varType == VarType.Int && valueStored[0] != '-'; } }
-    /// <summary>JsonValue contains a decimal.</summary>
     public bool IsDecimal { get { return varType == VarType.Decimal; } }
 
-    /// <summary>Returns Array of (JsonValue) stored in this object.</summary>
     public List<JsonValue> Array
     {
         get { return list; }
@@ -81,7 +89,7 @@ public class JsonValue
             list = value;
         }
     }
-    /// <summary>Returns Dictionary of (string, JsonValue) stored in this object.</summary>
+
     public Dictionary<string, JsonValue> Object
     {
         get { return content; }
@@ -152,7 +160,7 @@ public class JsonValue
     }
 
     #region Enums
-    enum VarType
+    public enum VarType
     {
         String,
         Int,
@@ -273,6 +281,11 @@ public class JsonValue
         return false;
     }
 
+    public void SetType(VarType type)
+    {
+        varType = type;
+    }
+
     public void Set(JsonValue obj)
     {
         this.list = obj.list;
@@ -280,21 +293,13 @@ public class JsonValue
         this.varType = obj.varType;
         this.valueStored = obj.valueStored;
     }
-
-    /// <summary>Sets the value stored in this object to string.</summary>
     public void Set(string value) { Set<string>(value); }
-    /// <summary>Sets the value stored in this object to bool.</summary>
     public void Set(bool value) { Set<bool>(value); }
-    /// <summary>Sets the value stored in this object to int.</summary>
     public void Set(int value) { Set<int>(value); }
-    /// <summary>Sets the value stored in this object to uint.</summary>
     public void Set(uint value) { Set<uint>(value); }
-    /// <summary>Sets the value stored in this object to float.</summary>
     public void Set(float value) { Set<float>(value); }
-    /// <summary>Sets the value stored in this object to double.</summary>
     public void Set(double value) { Set<double>(value); }
-    /// <summary>Sets the value stored in this object to decimal.</summary>
-    public void Set(decimal value) { Set<decimal>(value); }
+    public void Set(Decimal value) { Set<Decimal>(value); }
 
     void Set<T>(T value)
     {
@@ -313,6 +318,7 @@ public class JsonValue
             varType = VarType.Bool;
             valueStored = valueStored.ToLower();
         }
+        
     }
 
     #region ADD
@@ -457,6 +463,7 @@ public class JsonValue
     {
         if (varType != VarType.Array && varType != VarType.Object)
             return Serializer();
+
         return AddFormatting(Serializer());
     }
     /// <summary> Helper function for handling creating a json string of all connected JsonValue objects.</summary>
@@ -521,7 +528,8 @@ public class JsonValue
                         sb.Append(item.Serializer());
                         sb.Append(',');
                     }
-                    sb.Length--;
+                    if(!sb.Equals("["))
+                        sb.Length--;
                     sb.Append(']');
 
                     return sb.ToString();
@@ -535,7 +543,7 @@ public class JsonValue
                             continue;
                         sb.Append('\"' + item.Key + "\":" + content[item.Key].Serializer() + ',');
                     }
-                    if (content.Count > 0)
+                    if (content.Count > 0 && !sb.Equals("{"))
                     {
                         sb.Length--;
                     }
@@ -773,12 +781,27 @@ public class JsonValue
     static public string AddFormatting(string data)
     {
         StringBuilder result = new StringBuilder(data.Length);
+        bool inString = false;
         const string TAB = "    ";
         int tabDepth = 1;
         result.Append(data[0].ToString() + '\n' + TAB);
         int i = 1;
+
         while (i < data.Length)
         {
+            if (data[i] == '"')
+            {
+                if (data[i-1] != '\\')
+                    inString = !inString;
+            }
+
+            if(inString)
+            {
+                result.Append(data[i]);
+                i++;
+                continue;
+            }
+
             switch (data[i])
             {
                 case '{':
