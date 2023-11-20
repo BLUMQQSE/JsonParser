@@ -253,8 +253,10 @@ public class JsonValue
     /// <returns> Associated data for this objects as a uint. </returns>
     public uint AsUInt()
     {
-        int value = AsInt();
-        return (uint)Math.Abs(value);
+        uint result;
+        try { result = uint.Parse(valueStored); }
+        catch (Exception ex) { result = 0; }
+        return result;
     }
     /// <returns> Associated data for this objects as a double. </returns>
     public double AsDouble()
