@@ -4,19 +4,17 @@ Class for converting to and from a jsonstring and a data structure to contain th
 Example:
 
 ```
-public void Main(String[] args)
+string dataStr = @"{""name"": ""Billy"", ""age"":42, ""hobbies"":[""Golfing"", ""Swimming"", ""Hiking""]}";
+JsonValue value = new JsonValue();
+value.Parse(dataStr);
+value["employed"].Set(true);
+foreach (var item in value["hobbies"].Array)
 {
-  string dataStr = @"{"name": "Billy", "age":42, "hobbies":["Golfing", "Swimming", "Hiking"]}";
-  JsonValue value = new JsonValue();
-  value.Parse(dataStr);
-  value["employed"].Set(true);
-  foreach (var item in value["hobbies"].Array)
-  {
     Console.WriteLine(item.AsString());
-  }
-  value["hobbies"][2].Set(12.3);
-  Console.WriteLine(value.ToFormattedString());
 }
+value["hobbies"][2].Set(12.3);
+Console.WriteLine(value.ToFormattedString());
+
 ```
 Will output:
 ```
