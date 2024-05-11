@@ -8,11 +8,13 @@ public class JsonValue
 
     public override bool Equals(object obj)
     {
-        return this.ToString().Equals(obj.ToString());
+        return this == (JsonValue)obj;
     }
 
     public static bool operator == (JsonValue one, JsonValue two)
     { 
+        if (one is null && two is null) return true;
+        else if (one is null || two is null) return false;
         return one.ToString().Equals(two.ToString()); 
     }
 
